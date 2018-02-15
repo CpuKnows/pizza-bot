@@ -38,8 +38,8 @@ casper.test.begin('Conversation simple Demo', 5, function suite(test) {
 
   casper.start(baseHost, function () {
     casper.test.comment('Starting Testing');
-    test.assertHttpStatus(200, 'conversation-simple is up');
-    test.assertTitle('Conversation Chat App', 'Title is correct');
+    test.assertHttpStatus(200, 'pizza-bot is up');
+    test.assertTitle('Pete Za, pizza chatbot', 'Title is correct');
 
     testWelcomeMessageExists();
     testEnterMessageClick();

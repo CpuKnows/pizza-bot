@@ -21,5 +21,5 @@ deploy:
   - cf-blue-green-travis
   on:
     branch: master
-    repo: watson-developer-cloud/conversation-simple
+    repo: CpuKnows/pizza-bot
   skip_cleanup: true

@@ -41,10 +41,7 @@ app.post('/api/message', function(req, res) {
   if (!workspace || workspace === '<workspace-id>') {
     return res.json({
       'output': {
-        'text': 'The app has not been configured with a <b>WORKSPACE_ID</b> environment variable. Please refer to the ' + 
-        '<a href="https://github.com/watson-developer-cloud/conversation-simple">README</a> documentation on how to set this variable. <br>' + 
-        'Once a workspace has been defined the intents may be imported from ' + 
-        '<a href="https://github.com/watson-developer-cloud/conversation-simple/blob/master/training/car_workspace.json">here</a> in order to get a working application.'
+        'text': 'The app has not been configured with a <b>WORKSPACE_ID</b> environment variable.'
       }
     });
   }
@@ -71,27 +68,133 @@ app.post('/api/message', function(req, res) {
  */
 function updateMessage(input, response) {
   var responseText = null;
-  if (!response.output) {
+  
+  /*if (!response.output) {
     response.output = {};
   } else {
     return response;
+  }*/
+
+  var context = response.context;
+
+  // pizza
+  if (response.intents[0] && response.intents[0]['intent'] == 'yes' && 
+    context['confirmation'] == '(true || false) && slot_in_focus') {
+    console.log('Add to order: pizza');
+
+    var pizza = {
+      type: 'pizza',
+      size: context['pizza_size'], 
+      crust: context['pizza_crust'], 
+      toppings: context['pizza_toppings']
+    };
+
+    context['order'].push(pizza);
+    context['pizza_size'] = null;
+    context['pizza_crust'] = null;
+    context['pizza_toppings'] = null;
+    context['confirmation'] = null;
   }
-  if (response.intents && response.intents[0]) {
-    var intent = response.intents[0];
-    // Depending on the confidence of the response the app can return different messages.
-    // The confidence will vary depending on how well the system is trained. The service will always try to assign
-    // a class/intent to the input. If the confidence is low, then it suggests the service is unsure of the
-    // user's intent . In these cases it is usually best to return a disambiguation message
-    // ('I did not understand your intent, please rephrase your question', etc..)
-    if (intent.confidence >= 0.75) {
-      responseText = 'I understood your intent was ' + intent.intent;
-    } else if (intent.confidence >= 0.5) {
-      responseText = 'I think your intent was ' + intent.intent;
-    } else {
-      responseText = 'I did not understand your intent';
+
+  // stromboli
+  if (context['stromboli']) {
+    console.log('Add to order: stromboli');
+
+    var stromboli = {
+      type: 'stromboli',
+      stromboli: context['stromboli']
+    };
+
+    context['order'].push(stromboli);
+    context['stromboli'] = null;
+  }
+
+  // salad
+  if (context['salad_type'] && (context['salad_type'] == 'Caesar salad' || 
+    (context['salad_type'] && context['salad_dressing']))) {
+    console.log('Add to order: salad');
+
+    var salad = {
+      type: 'salad',
+      salad_type: context['salad_type'],
+      salad_dressing: context['salad_dressing']
+    };
+
+    context['order'].push(salad);
+    context['salad_type'] = null;
+    context['salad_dressing'] = null;
+  }
+
+  // side
+  if (context['side']) {
+    console.log('Add to order: side');
+
+    var side = { 
+      type: 'side',
+      side: context['side'] 
+    };
+
+    context['order'].push(side);
+    context['side'] = null;
+  }
+
+  // drink
+  if (context['drink']) {
+    console.log('Add to order: drink');
+
+    var drink = { 
+      type: 'drink',
+      drink: context['drink'] 
+    };
+
+    context['order'].push(drink);
+    context['drink'] = null;
+  }
+
+  // checkout
+  if ((response.intents[0] && response.intents[0]['intent'] == 'checkout') ||
+        context['goto_checkout']) {
+    var order = context['order'];
+    var order_str = 'Your final order is: <br> <blockquote>';
+
+    for (var i=0; i < order.length; i++) {
+      if (order[i]['type'] == 'pizza') {
+        var temp_str = 'A ' + order[i]['size'] + ' ' + order[i]['crust'] + ' crust pizza with ';
+
+        if (order[i]['toppings'].length == 2) {
+          temp_str += order[i]['toppings'][0] + ' and ' + order[i]['toppings'][1] + ' <br>';
+        } else {
+          temp_str += order[i]['toppings'].join(', ') + ' <br>';
+        }
+
+        order_str += temp_str;
+
+      } else if (order[i]['type'] == 'stromboli') {
+        order_str += 'A stromboli <br>'
+
+      } else if (order[i]['type'] == 'salad') {
+        if (order[i]['salad_type'] == 'Caesar salad') {
+          order_str += 'A Caesar salad <br>'
+        } else {
+          order_str += 'A garden salad with ' + order[i]['salad_dressing'] + ' <br>';
+        }
+
+      } else if (order[i]['type'] == 'side') {
+        order_str += 'An order of breadstisks <br>';
+
+      } else if (order[i]['type'] == 'drink') {
+        order_str += 'A ' + order[i]['drink'] + ' <br>';
+      }
     }
+
+    order_str += '</blockquote>' + 
+      'Don\'t worry about payment. This one\'s on us! <br>' +
+      'I already know where to deliver this. <br>' +
+      'Thank you ' + context['name'] + ' and come talk to me again soon!';
+    response.output.text = order_str;
   }
-  response.output.text = responseText;
+  
+  response.context = context;
   return response;
 }
 
